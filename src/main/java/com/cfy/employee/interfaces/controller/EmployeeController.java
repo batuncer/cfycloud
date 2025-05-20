@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/employees")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://cfycloud.s3-website-eu-west-1.amazonaws.com")
 public class EmployeeController {
     private final AddEmployeeUseCase addEmployeeUseCase;
     private final UpdateEmployeeUseCase updateEmployeeUseCase;
