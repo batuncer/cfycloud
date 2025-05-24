@@ -38,10 +38,9 @@ build/
 .terraform/
 terraform.tfvars
 .terraform.lock.hcl
-
+terraform/.terraform
 # IDE
 .idea/
-.vscode/
 
 # Mac
 .DS_Store
