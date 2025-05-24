@@ -32,7 +32,16 @@ build/
 ### VS Code ###
 .vscode/
 
-
-*terraform.tfvars
+# Terraform
+*.tfstate
 *.tfstate.backup
+.terraform/
+terraform.tfvars
 .terraform.lock.hcl
+
+# IDE
+.idea/
+.vscode/
+
+# Mac
+.DS_Store
