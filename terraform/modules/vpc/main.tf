@@ -12,7 +12,7 @@ resource "aws_internet_gateway" "gw" {
   }
 }
 
-# Public Subnet (unchanged)
+# Public Subnet
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidr
@@ -22,6 +22,8 @@ resource "aws_subnet" "public" {
     Name = "employee-public-subnet"
   }
 }
+
+# Private Subnet
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_cidrs[0]  # First CIDR from list

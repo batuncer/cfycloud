@@ -21,7 +21,7 @@ module "rds" {
   db_name           = var.db_name
   db_user           = var.db_user
   db_password       = var.db_password
-  private_subnet_ids = module.vpc.private_subnet_ids # Now gets list of both private subnets
+  private_subnet_ids = module.vpc.private_subnet_ids
   security_group_id  = module.security.rds_security_group_id
 }
 
