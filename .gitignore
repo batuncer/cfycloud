@@ -44,3 +44,4 @@ build/
 
 # Mac
 .DS_Store
+/Users/baki/Desktop/Projects/Cloud/employee/terraform/terraform.tfvars

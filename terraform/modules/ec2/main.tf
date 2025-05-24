@@ -10,10 +10,12 @@ data "aws_ami" "amazon_linux" {
 resource "aws_instance" "app" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = "t3.micro"
-  user_data                   = file("${path.module}/user_data.sh")
+  subnet_id                   = var.public_subnet_id
   associate_public_ip_address = true
+  vpc_security_group_ids      = [var.security_group_id]
+  user_data                   = file("${path.module}/user_data.sh")
 
   tags = {
-    Name = "backend-ec2"
+    Name = "employee-ec2"
   }
 }
