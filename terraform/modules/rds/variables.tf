@@ -1,3 +1,7 @@
+variable "db_name" {
+  type = string
+}
+
 variable "db_user" {
   type = string
 }
@@ -7,14 +11,10 @@ variable "db_password" {
   sensitive = true
 }
 
-variable "db_host" {
-  type = string
+variable "private_subnet_ids" {
+  type = list(string)
 }
 
-variable "db_port" {
-  type = number
-}
-
-variable "db_name" {
+variable "security_group_id" {
   type = string
 }

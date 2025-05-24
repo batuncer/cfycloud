@@ -1,103 +1,44 @@
 provider "aws" {
-  region = "eu-west-1"
+  region = var.aws_region
 }
 
-resource "aws_security_group" "app_sg" {
-  name   = "app-sg"
-  vpc_id = aws_vpc.cfyvpc.id
-
-  ingress {
-    description = "Allow SSH from your IP"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["109.157.59.205/32"]
-  }
-
-  ingress {
-    description = "Allow HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow Backend Port"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "AppSecurityGroup"
-  }
+module "vpc" {
+  source              = "./modules/vpc"
+  vpc_cidr            = var.vpc_cidr
+  public_subnet_cidr  = var.public_subnet_cidr
+  private_subnet_cidrs= var.private_subnet_cidrs
+  aws_region          = var.aws_region
 }
 
-module "secrets" {
-  db_user     = var.db_user
-  db_password = var.db_password
-  db_host     = module.rds.db_address
-  db_port     = 5432
-  source      = "variables.tf"
-}
-
-module "ec2" {
-  source             = "./modules/ec2"
-  public_subnet_id   = aws_subnet.publicsubnet.id
-  security_group_id  = aws_security_group.app_sg.id
+module "security" {
+  source         = "./modules/security"
+  vpc_id         = module.vpc.vpc_id
+  allowed_ssh_ip = var.allowed_ssh_ip
 }
 
 module "rds" {
   source             = "./modules/rds"
-  db_user            = var.db_user
-  db_password        = var.db_password
-  private_subnet_ids = [aws_subnet.privatesubnet.id]
-  security_group_id  = aws_security_group.app_sg.id
+  db_name           = var.db_name
+  db_user           = var.db_user
+  db_password       = var.db_password
+  private_subnet_ids = module.vpc.private_subnet_ids # Now gets list of both private subnets
+  security_group_id  = module.security.rds_security_group_id
 }
 
-
-resource "aws_subnet" "publicsubnet" {
-  vpc_id                  = aws_vpc.cfyvpc.id
-  cidr_block              = var.public_subnet_cidr
-  availability_zone       = "eu-west-1"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "publicsubnet-1"
-  }
+module "secrets" {
+  source      = "./modules/secrets"
+  db_user     = var.db_user
+  db_password = var.db_password
+  db_host     = module.rds.db_address
+  db_port     = var.db_port
+  db_name     = var.db_name
 }
 
-resource "aws_subnet" "privatesubnet" {
-  vpc_id            = aws_vpc.cfyvpc.id
-  cidr_block        = var.private_subnet_cidr
-  availability_zone = "eu-west-1"
-
-  tags = {
-    Name = "privatesubnet-1b"
-  }
-}
-
-resource "aws_vpc" "cfyvpc" {
-  cidr_block = var.vpc_cidr
-
-  tags = {
-    Name = "cfyvpc"
-  }
-}
-
-resource "aws_internet_gateway" "vpcgateway" {
-  vpc_id = aws_vpc.cfyvpc.id
-
-  tags = {
-    Name = "vpcgateway"
-  }
+module "ec2" {
+  source            = "./modules/ec2"
+  public_subnet_id  = module.vpc.public_subnet_id
+  security_group_id = module.security.security_group_id
+  secret_name       = module.secrets.secret_name
+  aws_region        = var.aws_region
+  docker_image      = var.docker_image
 }
