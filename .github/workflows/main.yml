@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Spring Boot with Docker
+name: CI/CD Pipeline for building and pushing Docker Image
 
 on:
   push:
@@ -21,35 +21,13 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      - name: Build Docker image
-        run: docker build -t employee-app .
-
-      - name: Save Docker image to tar
-        run: docker save employee-app > employee-app.tar
-
-      - name: Copy image to EC2
-        uses: appleboy/scp-action@v0.1.6
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          source: "employee-app.tar"
-          target: "~/"
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: SSH into EC2 and load image, then run container
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          script: |
-            docker load < employee-app.tar
-            docker stop employee-app || true && docker rm employee-app || true
-            docker run -d --name employee-app \
-              -v /home/ec2-user/application.properties:/application.properties \
-              -p 8080:8080 employee-app
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/employee-backend:latest .
+          docker push ${{ secrets.DOCKER_USERNAME }}/employee-backend:latest
