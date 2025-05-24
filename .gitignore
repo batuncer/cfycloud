@@ -36,9 +36,9 @@ build/
 *.tfstate
 *.tfstate.backup
 .terraform/
-terraform.tfvars
-.terraform.lock.hcl
-terraform/.terraform
+*terraform.tfvars
+*.terraform.lock.hcl
+*terraform/.terraform
 # IDE
 .idea/
 
