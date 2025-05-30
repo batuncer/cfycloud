@@ -41,5 +41,5 @@ variable "allowed_ssh_ip" {
 variable "docker_image" {
   description = "Docker image to deploy on EC2"
   type        = string
-  default     = "bakituncer/employee-backend:latest"  # Default value if none provided
+  default     = "employee-backend:latest"  # Default value if none provided
 }
