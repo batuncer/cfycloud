@@ -1,3 +1,4 @@
+# modules/rds/variables.tf
 variable "db_name" {
   type = string
 }
@@ -15,6 +16,6 @@ variable "private_subnet_ids" {
   type = list(string)
 }
 
-variable "security_group_id" {
+variable "security_group_id" { # This will be the RDS specific SG ID
   type = string
 }

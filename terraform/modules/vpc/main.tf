@@ -23,38 +23,34 @@ resource "aws_subnet" "public" {
   }
 }
 
-# Private Subnet
+# Private Subnet 1
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidrs[0]  # First CIDR from list
+  cidr_block        = var.private_subnet_cidrs[0]
   availability_zone = "${var.aws_region}b"
   tags = {
     Name = "employee-private-subnet-1"
   }
-
-  # Explicit dependency to avoid race conditions
   depends_on = [aws_vpc.main]
 }
 
+# Private Subnet 2
 resource "aws_subnet" "private_2" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidrs[1]  # Second CIDR from list
+  cidr_block        = var.private_subnet_cidrs[1]
   availability_zone = "${var.aws_region}c"
   tags = {
     Name = "employee-private-subnet-2"
   }
-
   depends_on = [aws_vpc.main]
 }
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
-
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.gw.id
   }
-
   tags = {
     Name = "employee-public-rt"
   }
