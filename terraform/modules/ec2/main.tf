@@ -26,15 +26,15 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 }
 
 resource "aws_instance" "app" {
-  ami                         = data.aws_ami.amazon_linux.id  // <--- ADD THIS BACK if missing
-  instance_type               = "t3.micro"                    // <--- ADD THIS BACK if missing (or your desired type)
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = "t3.micro"
 
   subnet_id                   = var.public_subnet_id
   associate_public_ip_address = true
   vpc_security_group_ids      = [var.security_group_id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   key_name                    = var.key_name
-  user_data_replace_on_change = true // Good to have for user_data updates
+  user_data_replace_on_change = true
   user_data = <<-EOF
 #!/bin/bash
 set -x
