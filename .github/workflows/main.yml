@@ -42,6 +42,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and Push Docker Image
+        working-directory: ./
         run: |
           docker build -t ${{ env.IMAGE_NAME }}/employee-backend:latest .
           docker push ${{ env.IMAGE_NAME }}/employee-backend:latest
