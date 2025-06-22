@@ -6,7 +6,10 @@ on:
 
 env:
   IMAGE_NAME: ${{secrets.DOCKER_USERNAME}}/employee-backend
-
+  DB_HOST: ${{secrets.DB_HOST}}
+  DB_NAME: ${{secrets.DB_NAME}}
+  DB_USER: ${{secrets.DB_USER}}
+  DB_PASSWORD: ${{secrets.DB_PASSWORD}}
 jobs:
   build:
     runs-on: ubuntu-latest
