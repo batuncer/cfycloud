@@ -22,7 +22,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i cfy.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             sudo yum update -y
-            sudo amazon-linux-extras install docker -y
+            sudo yum install -y docker
             sudo systemctl start docker
             sudo systemctl enable docker
             sudo usermod -aG docker $USER
