@@ -36,5 +36,5 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/employee-backend:latest
             docker stop employee || true
             docker rm employee || true
-            docker run -d --name employee -e DB_HOST=${{env.DB_HOST}} -e DB_USER=${{env.DB_USER}} -e DB_PASSWORD=${{env.DB_PASSWORD}} -e DB_NAME=${{env.DB_PASSWORD}} -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/employee-backend:latest
+            docker run -d --name employee -e DB_HOST=${{env.DB_HOST}} -e DB_USER=${{env.DB_USER}} -e DB_PASSWORD=${{env.DB_PASSWORD}} -e DB_NAME=${{env.DB_NAME}} -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/employee-backend:latest
           EOF
