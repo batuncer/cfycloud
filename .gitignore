@@ -47,3 +47,17 @@ build/
 /Users/baki/Desktop/Projects/Cloud/employee/terraform/terraform.tfvars
 
 /terraform.tfvars
+
+*.tfvars
+
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+terraform.tfstate
+terraform.tfstate.backup
+
+crash.log
+
+.terraform/
