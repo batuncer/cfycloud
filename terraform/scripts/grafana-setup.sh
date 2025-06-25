@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# Grafana Setup Script with Simplified Dashboard Configuration
 set -e
 
-# Update system
+# Update system packages
 yum update -y
 
 # Install Docker
@@ -28,6 +27,10 @@ EOF
 # Install Grafana
 yum install -y grafana
 
+
+prometheus_private_ip=$${prometheus_private_ip:-"127.0.0.1"}
+
+
 # Configure Grafana
 cat > /etc/grafana/grafana.ini << EOF
 [server]
@@ -47,15 +50,14 @@ enabled = false
 [dashboards]
 default_home_dashboard_path = /var/lib/grafana/dashboards/simplified-java-app-monitoring.json
 
-[alerting]
+[unified_alerting]
 enabled = true
-execute_alerts = true
 
 [smtp]
 enabled = false
 EOF
 
-# Create datasource configuration
+# Create datasource provisioning directory and Prometheus datasource config
 mkdir -p /etc/grafana/provisioning/datasources
 cat > /etc/grafana/provisioning/datasources/prometheus.yml << EOF
 apiVersion: 1
@@ -73,15 +75,15 @@ datasources:
       httpMethod: "POST"
 EOF
 
-# Create dashboard provisioning configuration
+# Create dashboard provisioning directory and config
 mkdir -p /etc/grafana/provisioning/dashboards
 cat > /etc/grafana/provisioning/dashboards/dashboard.yml << EOF
 apiVersion: 1
 
 providers:
-  - name: \'default\'
+  - name: 'default'
     orgId: 1
-    folder: \'\'
+    folder: ''
     type: file
     disableDeletion: false
     updateIntervalSeconds: 10
@@ -93,8 +95,8 @@ EOF
 # Create dashboards directory
 mkdir -p /var/lib/grafana/dashboards
 
-# Create Simplified Java Application Dashboard
-cat > /var/lib/grafana/dashboards/simplified-java-app-monitoring.json << \'EOF\'
+# Simplified Java App Monitoring Dashboard JSON
+cat > /var/lib/grafana/dashboards/simplified-java-app-monitoring.json << 'EOF_JAVA_DASHBOARD'
 {
   "dashboard": {
     "id": null,
@@ -159,10 +161,10 @@ cat > /var/lib/grafana/dashboards/simplified-java-app-monitoring.json << \'EOF\'
     "refresh": "5s"
   }
 }
-\'EOF\'
+EOF_JAVA_DASHBOARD
 
-# Create Simplified Infrastructure Overview Dashboard
-cat > /var/lib/grafana/dashboards/simplified-infrastructure-overview.json << \'EOF\'
+# Simplified Infrastructure Overview Dashboard JSON
+cat > /var/lib/grafana/dashboards/simplified-infrastructure-overview.json << 'EOF_INFRA_DASHBOARD'
 {
   "dashboard": {
     "id": null,
@@ -177,7 +179,7 @@ cat > /var/lib/grafana/dashboards/simplified-infrastructure-overview.json << \'E
         "targets": [
           {
             "expr": "count(up{job=\"java-app\"} == 1)",
-            "legendFormat": "Java Apps Online",
+            "legendFormat": "Java App Status",
             "refId": "A"
           },
           {
@@ -244,13 +246,13 @@ cat > /var/lib/grafana/dashboards/simplified-infrastructure-overview.json << \'E
     "refresh": "1m"
   }
 }
-\'EOF\'
+EOF_INFRA_DASHBOARD
 
-# Set ownership
+# Set ownership (grafana kullanıcısına)
 chown -R grafana:grafana /etc/grafana
 chown -R grafana:grafana /var/lib/grafana
 
-# Start and enable Grafana
+# Start and enable Grafana service
 systemctl daemon-reload
 systemctl start grafana-server
 systemctl enable grafana-server
@@ -259,4 +261,3 @@ echo "Grafana setup completed successfully!"
 echo "Access Grafana at http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):3000"
 echo "Default credentials: admin/admin123"
 echo "Dashboards have been automatically provisioned"
-

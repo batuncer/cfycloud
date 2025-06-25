@@ -36,6 +36,53 @@ cp -r prometheus-2.45.0.linux-amd64/console_libraries /etc/prometheus
 chown -R prometheus:prometheus /etc/prometheus/consoles
 chown -R prometheus:prometheus /etc/prometheus/console_libraries
 
+# Create simplified alert rules file
+cat > /etc/prometheus/simplified-prometheus-alerts.yml << 'EOF_ALERTS'
+groups:
+  - name: simplified_java_app_alerts
+    rules:
+      - alert: JavaAppDown
+        expr: up{job="java-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Java Application is Down"
+          description: "The Java application instance {{ $labels.instance }} is unreachable."
+
+      - alert: HighJavaAppLatency
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Latency for Java Application"
+          description: "The 95th percentile request latency for {{ $labels.uri }} is {{ $value }}s."
+
+      - alert: HighJavaAppMemoryUsage
+        expr: (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High JVM Heap Memory Usage"
+          description: "JVM heap memory usage is at {{ $value | humanizePercentage }} on instance {{ $labels.instance }}."
+
+  - name: simplified_infrastructure_alerts
+    rules:
+      - alert: HighNodeCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High CPU Usage on Node"
+          description: "CPU usage is {{ $value }}% on node {{ $labels.instance }}."
+
+EOF_ALERTS
+
+chown prometheus:prometheus /etc/prometheus/simplified-prometheus-alerts.yml
+
 # Create Prometheus configuration
 cat > /etc/prometheus/prometheus.yml << EOF
 global:
@@ -52,7 +99,7 @@ scrape_configs:
 
   - job_name: 'java-app'
     static_configs:
-      - targets: ['${java_app_private_ip}:8081']
+      - targets: ['${java_app_private_ip}:8080']
     metrics_path: '/actuator/prometheus'
     scrape_interval: 5s
 
@@ -68,10 +115,6 @@ alerting:
 EOF
 
 chown prometheus:prometheus /etc/prometheus/prometheus.yml
-
-# Copy simplified alert rules
-cp /home/ubuntu/terraform/simplified-prometheus-alerts.yml /etc/prometheus/simplified-prometheus-alerts.yml
-chown prometheus:prometheus /etc/prometheus/simplified-prometheus-alerts.yml
 
 # Create systemd service file
 cat > /etc/systemd/system/prometheus.service << EOF
@@ -131,4 +174,5 @@ systemctl start node_exporter
 systemctl enable node_exporter
 
 echo "Prometheus setup completed successfully!"
+
 

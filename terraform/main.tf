@@ -95,6 +95,14 @@ resource "aws_security_group" "ec2_sg" {
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port = 8081
+    to_port  = 8081
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port = 0
     to_port = 0
@@ -205,6 +213,7 @@ resource "aws_instance" "prometheus" {
   key_name               = "cfy"
   vpc_security_group_ids = [aws_security_group.prometheus.id]
   subnet_id              = aws_subnet.public_subnet.id
+  associate_public_ip_address = true
 
   user_data = base64encode(templatefile("${path.module}/scripts/prometheus-setup.sh", {
     java_app_private_ip = aws_instance.cfy_cloud.private_ip
@@ -286,6 +295,7 @@ resource "aws_instance" "grafana" {
   key_name               = "cfy"
   vpc_security_group_ids = [aws_security_group.grafana.id]
   subnet_id              = aws_subnet.public_subnet.id
+  associate_public_ip_address = true
 
   user_data = base64encode(templatefile("${path.module}/scripts/grafana-setup.sh", {
     prometheus_private_ip = aws_instance.prometheus.private_ip
