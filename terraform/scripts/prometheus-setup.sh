@@ -173,6 +173,4 @@ systemctl daemon-reload
 systemctl start node_exporter
 systemctl enable node_exporter
 
-echo "Prometheus setup completed successfully!"
-
 

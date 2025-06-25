@@ -98,7 +98,6 @@ mkdir -p /var/lib/grafana/dashboards
 # Simplified Java App Monitoring Dashboard JSON
 cat > /var/lib/grafana/dashboards/simplified-java-app-monitoring.json << 'EOF_JAVA_DASHBOARD'
 {
-  "dashboard": {
     "id": null,
     "title": "Simplified Java App Monitoring",
     "tags": ["java", "monitoring", "simplified"],
@@ -160,13 +159,12 @@ cat > /var/lib/grafana/dashboards/simplified-java-app-monitoring.json << 'EOF_JA
     "time": {"from": "now-1h", "to": "now"},
     "refresh": "5s"
   }
-}
 EOF_JAVA_DASHBOARD
 
 # Simplified Infrastructure Overview Dashboard JSON
 cat > /var/lib/grafana/dashboards/simplified-infrastructure-overview.json << 'EOF_INFRA_DASHBOARD'
 {
-  "dashboard": {
+
     "id": null,
     "title": "Simplified Infrastructure Overview",
     "tags": ["infrastructure", "overview", "simplified"],
@@ -245,10 +243,9 @@ cat > /var/lib/grafana/dashboards/simplified-infrastructure-overview.json << 'EO
     "time": {"from": "now-6h", "to": "now"},
     "refresh": "1m"
   }
-}
 EOF_INFRA_DASHBOARD
 
-# Set ownership (grafana kullanıcısına)
+
 chown -R grafana:grafana /etc/grafana
 chown -R grafana:grafana /var/lib/grafana
 
@@ -257,7 +254,4 @@ systemctl daemon-reload
 systemctl start grafana-server
 systemctl enable grafana-server
 
-echo "Grafana setup completed successfully!"
 echo "Access Grafana at http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):3000"
-echo "Default credentials: admin/admin123"
-echo "Dashboards have been automatically provisioned"
