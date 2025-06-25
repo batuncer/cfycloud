@@ -1,6 +1,16 @@
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 # Configure the AWS Provider
 provider "aws" {
-  region = "eu-west-1"
+  region = var.aws_region
 }
 
 # Virtual Private cloud
@@ -18,7 +28,7 @@ resource "aws_vpc" "cfy_vpc" {
 resource "aws_subnet" "public_subnet" {
   vpc_id = aws_vpc.cfy_vpc.id
   cidr_block = "10.0.2.0/24"
-  availability_zone = "eu-west-1a"
+  availability_zone = "${var.aws_region}a"
 
   tags = {
     Name="public_subnet"
@@ -28,7 +38,7 @@ resource "aws_subnet" "public_subnet" {
 resource "aws_subnet" "private_subnet" {
   vpc_id = aws_vpc.cfy_vpc.id
   cidr_block = "10.0.1.0/24"
-  availability_zone = "eu-west-1b"
+  availability_zone = "${var.aws_region}b"
 
   tags = {
     Name="private_subnet"
@@ -186,4 +196,165 @@ EOF
   tags = {
     Name = "cfy-instance"
   }
+}
+
+# Prometheus Server
+resource "aws_instance" "prometheus" {
+  ami ="ami-015b1e8e2a6899bdb"
+  instance_type = "t2.micro"
+  key_name               = "cfy"
+  vpc_security_group_ids = [aws_security_group.prometheus.id]
+  subnet_id              = aws_subnet.public_subnet.id
+
+  user_data = base64encode(templatefile("${path.module}/scripts/prometheus-setup.sh", {
+    java_app_private_ip = aws_instance.cfy_cloud.private_ip
+  }))
+
+  tags = {
+    Name        = "prometheus"
+    Type        = "monitoring"
+  }
+
+  depends_on = [aws_instance.cfy_cloud]
+}
+
+# Security Groups
+resource "aws_security_group" "prometheus" {
+  name_prefix = "prometheus"
+  vpc_id      = aws_vpc.cfy_vpc.id
+
+  ingress {
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "prometheus-sg"
+  }
+}
+
+resource "aws_security_group" "grafana" {
+  name_prefix = "grafana_dg"
+  vpc_id      = aws_vpc.cfy_vpc.id
+
+  ingress {
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "grafana_sg"
+  }
+}
+
+# Grafana Server
+resource "aws_instance" "grafana" {
+  ami ="ami-015b1e8e2a6899bdb"
+  instance_type = "t2.micro"
+  key_name               = "cfy"
+  vpc_security_group_ids = [aws_security_group.grafana.id]
+  subnet_id              = aws_subnet.public_subnet.id
+
+  user_data = base64encode(templatefile("${path.module}/scripts/grafana-setup.sh", {
+    prometheus_private_ip = aws_instance.prometheus.private_ip
+  }))
+
+  tags = {
+    Name        = "grafana"
+    Type        = "monitoring"
+  }
+
+  depends_on = [aws_instance.prometheus]
+}
+
+# CloudWatch Log Group for application logs
+resource "aws_cloudwatch_log_group" "java_app_logs" {
+  name              = "cfy-app-logs"
+  retention_in_days = 14
+
+  tags = {
+    Name        = "cfy-app-logs"
+  }
+}
+
+# CloudWatch Dashboard
+resource "aws_cloudwatch_dashboard" "monitoring" {
+  dashboard_name = "monitoring"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.cfy_cloud.id],
+            [".", ".", ".", aws_instance.prometheus.id],
+            [".", ".", ".", aws_instance.grafana.id]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "EC2 CPU Utilization"
+          period  = 300
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/EC2", "StatusCheckFailed", "InstanceId", aws_instance.cfy_cloud.id],
+            [".", ".", ".", aws_instance.prometheus.id],
+            [".", ".", ".", aws_instance.grafana.id]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "EC2 Status Check Failed"
+          period  = 300
+        }
+      }
+    ]
+  })
 }

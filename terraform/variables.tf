@@ -14,5 +14,9 @@ variable "db_password" {
   description = "DB PASSWORD"
   type = string
   sensitive = true
+}
 
+variable "aws_region" {
+  description = "region"
+  type= string
 }
