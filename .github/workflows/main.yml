@@ -2,7 +2,7 @@ name: Basic CI/CD Pipeline
 
 on:
   push:
-    branches: [ sprintOne ]
+    branches: [ sprintFive ]
 
 env:
   IMAGE_NAME: ${{secrets.DOCKER_USERNAME}}/employee-backend
