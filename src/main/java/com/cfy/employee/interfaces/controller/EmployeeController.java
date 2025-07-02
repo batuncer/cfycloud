@@ -39,7 +39,7 @@ public class EmployeeController {
     // Update Employee
     @PutMapping("/{id}")
     public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
-        employee.setId(id); // id'yi DTO'ya ekliyoruz
+        employee.setId(id);
         Employee updatedEmployee = updateEmployeeUseCase.updateEmployee(id,employee);
         return ResponseEntity.ok(updatedEmployee);
     }
