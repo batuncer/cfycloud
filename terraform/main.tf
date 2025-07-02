@@ -49,9 +49,9 @@ resource "aws_subnet" "private_subnet" {
 resource "aws_internet_gateway" "cfy_gate_away" {
   vpc_id = aws_vpc.cfy_vpc.id
 
-tags = {
-  Name="cfy_gate_away"
-}
+  tags = {
+    Name="cfy_gate_away"
+  }
 
 }
 
@@ -79,7 +79,7 @@ resource "aws_route_table_association" "public_association" {
 # Security group for EC2
 resource "aws_security_group" "ec2_sg" {
   name = "ec2_sg"
-  description = "SSH AND HTTP"
+  description = "SSH, HTTP, Prometheus, Grafana"
   vpc_id = aws_vpc.cfy_vpc.id
 
   ingress {
@@ -96,10 +96,19 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Add Prometheus port
   ingress {
-    from_port = 8081
-    to_port  = 8081
-    protocol  = "tcp"
+    from_port = 9090
+    to_port = 9090
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Add Grafana port
+  ingress {
+    from_port = 3000
+    to_port = 3000
+    protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -180,133 +189,16 @@ resource "aws_instance" "cfy_cloud" {
   key_name = "cfy"
   associate_public_ip_address = true
 
-  user_data = <<-EOF
-              #!/bin/bash
-              sudo yum update -y
-              sudo yum install -y docker
-              sudo systemctl start docker
-              sudo systemctl enable docker
-              sudo usermod -a -G docker ec2-user
-              echo "${var.docker_password}" | docker login -u "${var.docker_username}" --password-stdin
-              docker pull ${var.docker_username}/employee-backend:latest
-              docker stop employee || true
-              docker rm employee || true
-              docker run -d --name employee \
-                -e DB_HOST=${aws_db_instance.postgres.address} \
-                -e DB_NAME=cfydb \
-                -e DB_PASSWORD=${var.db_password} \
-                -e DB_USER=postgres \
-                -p 8080:8080 \
-                ${var.docker_username}/employee-backend:latest
-EOF
-
+  user_data = base64encode(templatefile("${path.module}/scripts/user_data.sh", {
+    DOCKER_USERNAME = var.docker_username
+    DOCKER_PASSWORD = var.docker_password
+    DB_HOST         = aws_db_instance.postgres.address
+    DB_PASSWORD     = var.db_password
+  }))
 
   tags = {
     Name = "cfy-instance"
   }
-}
-
-# Prometheus Server
-resource "aws_instance" "prometheus" {
-  ami ="ami-015b1e8e2a6899bdb"
-  instance_type = "t2.micro"
-  key_name               = "cfy"
-  vpc_security_group_ids = [aws_security_group.prometheus.id]
-  subnet_id              = aws_subnet.public_subnet.id
-  associate_public_ip_address = true
-
-  user_data = base64encode(templatefile("${path.module}/scripts/prometheus-setup.sh", {
-    java_app_private_ip = aws_instance.cfy_cloud.private_ip
-  }))
-
-  tags = {
-    Name        = "prometheus"
-    Type        = "monitoring"
-  }
-
-  depends_on = [aws_instance.cfy_cloud]
-}
-
-# Security Groups
-resource "aws_security_group" "prometheus" {
-  name_prefix = "prometheus"
-  vpc_id      = aws_vpc.cfy_vpc.id
-
-  ingress {
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "prometheus-sg"
-  }
-}
-
-resource "aws_security_group" "grafana" {
-  name_prefix = "grafana_dg"
-  vpc_id      = aws_vpc.cfy_vpc.id
-
-  ingress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "grafana_sg"
-  }
-}
-
-# Grafana Server
-resource "aws_instance" "grafana" {
-  ami ="ami-015b1e8e2a6899bdb"
-  instance_type = "t2.micro"
-  key_name               = "cfy"
-  vpc_security_group_ids = [aws_security_group.grafana.id]
-  subnet_id              = aws_subnet.public_subnet.id
-  associate_public_ip_address = true
-
-  user_data = base64encode(templatefile("${path.module}/scripts/grafana-setup.sh", {
-    prometheus_private_ip = aws_instance.prometheus.private_ip
-  }))
-
-  tags = {
-    Name        = "grafana"
-    Type        = "monitoring"
-  }
-
-  depends_on = [aws_instance.prometheus]
 }
 
 # CloudWatch Log Group for application logs
@@ -334,9 +226,7 @@ resource "aws_cloudwatch_dashboard" "monitoring" {
 
         properties = {
           metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.cfy_cloud.id],
-            [".", ".", ".", aws_instance.prometheus.id],
-            [".", ".", ".", aws_instance.grafana.id]
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.cfy_cloud.id]
           ]
           view    = "timeSeries"
           stacked = false
@@ -354,9 +244,7 @@ resource "aws_cloudwatch_dashboard" "monitoring" {
 
         properties = {
           metrics = [
-            ["AWS/EC2", "StatusCheckFailed", "InstanceId", aws_instance.cfy_cloud.id],
-            [".", ".", ".", aws_instance.prometheus.id],
-            [".", ".", ".", aws_instance.grafana.id]
+            ["AWS/EC2", "StatusCheckFailed", "InstanceId", aws_instance.cfy_cloud.id]
           ]
           view    = "timeSeries"
           stacked = false
@@ -368,3 +256,4 @@ resource "aws_cloudwatch_dashboard" "monitoring" {
     ]
   })
 }
+
