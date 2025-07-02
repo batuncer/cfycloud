@@ -59,7 +59,7 @@ The dashboard shows:
 - Total number of employees created, deleted, and updated (`employee_created_total`, `employee_deleted_total`, `employee_updated_total`)
 - Latency of employee-related operations (`employee_operation_latency`) measured in milliseconds
 - Time-series charts for employee creation, deletion, and update counts over time
-- Pie charts showing distribution of employee operations
+-  Employee operations
 - Alerts on high latency or abnormal employee operation counts
 
 ### Alert Rules
